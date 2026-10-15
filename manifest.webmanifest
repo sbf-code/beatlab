@@ -1,0 +1,25 @@
+{
+  "name": "BeatLab — Studio musical",
+  "short_name": "BeatLab",
+  "description": "Mini-studio musical mobile pour créer des rythmes et des mélodies.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#10111b",
+  "theme_color": "#10111b",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

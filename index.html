@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#10111b">
+<title>BeatLab — Studio musical</title>
+<style>
+:root{--bg:#10111b;--panel:#1b1d2b;--panel2:#24273a;--text:#f5f6ff;--muted:#a6abc4;--accent:#a78bfa;--green:#53e0b5;--orange:#ffb86b;--red:#ff6f91}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(150deg,#15172a,#0d0e16 70%);color:var(--text);font:15px system-ui,-apple-system,sans-serif}
+header{padding:20px 16px 14px;position:sticky;top:0;background:#10111beF;backdrop-filter:blur(12px);z-index:5;border-bottom:1px solid #ffffff12}
+.brand{display:flex;align-items:center;gap:10px}.logo{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#a78bfa,#53e0b5);display:grid;place-items:center;color:#171326;font-size:23px;font-weight:900}
+h1{font-size:22px;margin:0}header p{color:var(--muted);margin:3px 0 0;font-size:12px}
+main{padding:14px;max-width:900px;margin:auto}.transport,.panel,.track{background:var(--panel);border:1px solid #ffffff12;border-radius:18px;padding:14px;margin-bottom:13px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.row.spread{justify-content:space-between}
+button,select,input{font:inherit}button{border:0;border-radius:12px;padding:11px 13px;background:var(--panel2);color:var(--text);font-weight:650;cursor:pointer}button:active{transform:scale(.98)}button.primary{background:var(--accent);color:#1b1430}button.green{background:var(--green);color:#10231e}button.danger{background:#492536;color:#ffd9e2}button.small{padding:8px 10px;font-size:12px}
+label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:5px}input[type=number],select{background:#111321;border:1px solid #ffffff1a;color:var(--text);padding:9px;border-radius:10px;min-width:75px}input[type=range]{width:100%;accent-color:var(--accent)}
+.stats{color:var(--muted);font-size:12px;margin-top:9px}.section-title{font-size:15px;font-weight:800;margin:0 0 12px}
+.track-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.track-name{font-weight:800;flex:1;min-width:90px}.tag{font-size:11px;color:#171326;background:var(--green);border-radius:99px;padding:4px 8px;font-weight:800}
+.steps{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:4px;margin:13px 0 9px}.step{padding:0;border-radius:6px;min-width:0;height:31px;background:#303349;border:1px solid #ffffff0b}.step.on{background:var(--accent);box-shadow:0 0 12px #a78bfa44}.step.playhead{outline:2px solid var(--green);outline-offset:1px}.step:nth-child(4n+1){margin-left:2px}
+.track-controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}.track-controls label span{display:flex;justify-content:space-between}
+.track-controls select{width:100%}.muted{opacity:.45}.hint{color:var(--muted);font-size:12px;line-height:1.5}.footer{color:var(--muted);text-align:center;font-size:11px;padding:12px 5px 28px}
+.piano{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin-top:10px}.key{height:64px;background:#f5f2ff;color:#242038;border-radius:8px 8px 12px 12px;padding:6px 2px;display:flex;align-items:flex-end;justify-content:center;font-size:11px}.key:active{background:var(--green)}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#25283a;padding:12px 16px;border-radius:12px;box-shadow:0 8px 30px #0008;display:none;z-index:20;max-width:90vw}
+@media(min-width:650px){.track-controls{grid-template-columns:1fr 1fr 1fr}.steps{gap:6px}.step{height:36px}}
+</style>
+<link rel="manifest" href="./manifest.webmanifest">
+</head>
+<body>
+<header><div class="brand"><div class="logo">♫</div><div><h1>BeatLab</h1><p>Ton mini-studio musical · prototype gratuit</p></div></div></header>
+<main>
+<section class="transport">
+ <div class="row spread"><div><div style="font-weight:800;font-size:17px">Session en cours</div><div class="stats" id="status">Prêt à jouer</div></div><button id="play" class="primary">▶ Lecture</button></div>
+ <div class="row" style="margin-top:13px">
+  <label>Tempo (BPM)<input id="tempo" type="number" min="50" max="180" value="110"></label>
+  <label>Mesures<input id="bars" type="number" min="1" max="8" value="4"></label>
+  <label>Volume master<input id="master" type="range" min="0" max="100" value="75"></label>
+ </div>
+ <div class="row" style="margin-top:13px"><button id="add" class="green">＋ Ajouter une piste</button><button id="clear">Effacer les motifs</button></div>
+ <div class="hint" style="margin-top:10px">Chaque motif de 16 pas se répète sur le nombre de mesures choisi. Touchez les cases pour activer/désactiver les sons.</div>
+</section>
+<section class="panel">
+ <div class="section-title">🎹 Jouer une mélodie</div>
+ <div class="row"><label>Instrument<select id="liveInstrument"><option value="keys">Piano doux</option><option value="bass">Basse</option><option value="synth">Synthé</option></select></label><label>Octave<select id="octave"><option value="3">Grave</option><option value="4" selected>Medium</option><option value="5">Aiguë</option></select></label></div>
+ <div class="piano" id="piano"></div>
+ <div class="hint" style="margin-top:8px">Les touches jouent en direct. Pour composer, activez les pas dans la piste mélodique ci-dessous.</div>
+</section>
+<div class="section-title" style="padding:3px 2px">🎛️ Pistes</div>
+<div id="tracks"></div>
+<section class="panel">
+ <div class="section-title">📦 Exporter ton morceau</div>
+ <div class="row"><label>Qualité MP3<select id="quality"><option value="128">128 kb/s — léger</option><option value="192" selected>192 kb/s — recommandé</option><option value="320">320 kb/s — haute qualité</option></select></label></div>
+ <div class="row" style="margin-top:12px"><button id="wav" class="green">Exporter WAV</button><button id="mp3" class="primary">Exporter MP3</button><button id="project">Sauver le projet</button><label style="display:inline-flex;justify-content:center"><input id="loadfile" type="file" accept=".json,application/json" style="max-width:180px">Charger projet JSON</label></div>
+ <div class="hint" style="margin-top:10px">Le WAV fonctionne sans bibliothèque externe. L’export MP3 charge un encodeur gratuit depuis Internet : une connexion est nécessaire. L’export dure autant que le nombre de mesures choisi.</div>
+</section>
+<div class="footer">BeatLab est un prototype web : ajoute cette page à l’écran d’accueil de ton téléphone pour l’ouvrir comme une petite appli. Les projets sont enregistrés dans un fichier sur ton appareil.</div>
+</main>
+<div id="toast" class="toast"></div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+let ctx=null, master=null, playing=false, timer=null, step=0, startTime=0, tracks=[], nextId=1;
+const colors=['#a78bfa','#53e0b5','#ffb86b','#ff6f91','#78c8ff'];
+const noteNames=['C','D','E','F','G','A','B','C'];
+function initAudio(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=+$('master').value/100;master.connect(ctx.destination)} if(ctx.state==='suspended')ctx.resume()}
+function toast(s){$('toast').textContent=s;$('toast').style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>$('toast').style.display='none',2600)}
+function mkTrack(type='drums'){
+ const names={drums:'Batterie',bass:'Basse',keys:'Piano',synth:'Synthé'};
+ const t={id:nextId++,name:names[type]||'Nouvelle piste',type,vol:.8,muted:false,pattern:Array(16).fill(false),notes:Array(16).fill(null)};
+ if(type==='drums'){[0,4,8,12].forEach(i=>t.pattern[i]=true);[4,12].forEach(i=>t.pattern[i]=true);[2,6,10,14].forEach(i=>t.pattern[i]=true)}
+ if(type==='bass'){[0,8].forEach(i=>t.pattern[i]=true);t.notes[0]=36;t.notes[8]=36}
+ if(type==='keys'){[0,4,8,12].forEach(i=>t.pattern[i]=true);[0,4,8,12].forEach((i,n)=>t.notes[i]=[60,64,67,64][n])}
+ if(type==='synth'){[2,6,10,14].forEach(i=>{t.pattern[i]=true;t.notes[i]=[72,76,79,76][(i/4)|0]})}
+ tracks.push(t);renderTracks()
+}
+function oscNote(freq,time,dur,vol,type='sine'){
+ if(!ctx||!master)return;
+ const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(freq,time);
+ g.gain.setValueAtTime(.0001,time);g.gain.exponentialRampToValueAtTime(Math.max(.001,vol),time+.012);g.gain.exponentialRampToValueAtTime(.0001,time+dur);
+ o.connect(g);g.connect(master);o.start(time);o.stop(time+dur+.03)
+}
+function drumSound(kind,time,vol){
+ if(!ctx)return;
+ const g=ctx.createGain();g.gain.setValueAtTime(vol,time);g.gain.exponentialRampToValueAtTime(.001,time+.13);g.connect(master);
+ if(kind==='kick'){const o=ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(140,time);o.frequency.exponentialRampToValueAtTime(45,time+.12);o.connect(g);o.start(time);o.stop(time+.14)}
+ else {const n=Math.floor(ctx.sampleRate*.08),buf=ctx.createBuffer(1,n,ctx.sampleRate),d=buf.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;const s=ctx.createBufferSource();s.buffer=buf;s.connect(g);s.start(time);s.stop(time+.08)}
+}
+function playTrack(t,i,time){
+ if(t.muted||!t.pattern[i])return;
+ const vol=t.vol*(+$('master').value/100);
+ if(t.type==='drums'){if(i%4===0)drumSound('kick',time,vol*.8);else if(i%4===2)drumSound('hat',time,vol*.18);if(i===4||i===12)drumSound('snare',time,vol*.42);return}
+ const midi=t.notes[i]??(t.type==='bass'?36:t.type==='keys'?60:72);
+ const freq=440*Math.pow(2,(midi-69)/12);
+ oscNote(freq,time,t.type==='bass'?.19:.27,vol*.22,t.type==='bass'?'triangle':t.type==='keys'?'sine':'sawtooth');
+}
+function scheduleStep(){
+ if(!playing)return;
+ const bpm=Math.max(50,Math.min(180,+$('tempo').value||110)), interval=60/bpm/4;
+ const time=ctx.currentTime+.015;
+ tracks.forEach(t=>playTrack(t,step,time));
+ document.querySelectorAll('.step').forEach(el=>el.classList.toggle('playhead',+el.dataset.step===step));
+ step=(step+1)%16;
+ timer=setTimeout(scheduleStep,interval*1000);
+}
+function start(){initAudio();if(playing)return;playing=true;$('play').textContent='■ Arrêter';$('status').textContent='Lecture en cours';scheduleStep()}
+function stop(){playing=false;clearTimeout(timer);$('play').textContent='▶ Lecture';$('status').textContent='Prêt à jouer';document.querySelectorAll('.step').forEach(e=>e.classList.remove('playhead'))}
+function renderTracks(){
+ const root=$('tracks');root.innerHTML='';
+ tracks.forEach((t,idx)=>{
+  const card=document.createElement('section');card.className='track'+(t.muted?' muted':'');
+  const head=document.createElement('div');head.className='track-head';
+  const dot=document.createElement('span');dot.className='tag';dot.style.background=colors[idx%colors.length];dot.textContent=t.type.toUpperCase();
+  const name=document.createElement('div');name.className='track-name';name.textContent=t.name;
+  const mute=document.createElement('button');mute.className='small';mute.textContent=t.muted?'Activer':'Muet';mute.onclick=()=>{t.muted=!t.muted;renderTracks()};
+  const del=document.createElement('button');del.className='small danger';del.textContent='Supprimer';del.onclick=()=>{tracks=tracks.filter(x=>x.id!==t.id);renderTracks()};
+  head.append(dot,name,mute,del);card.append(head);
+  const steps=document.createElement('div');steps.className='steps';
+  t.pattern.forEach((on,i)=>{const b=document.createElement('button');b.className='step'+(on?' on':'');b.dataset.step=i;b.setAttribute('aria-label','Pas '+(i+1));b.onclick=()=>{t.pattern[i]=!t.pattern[i];if(t.pattern[i]&&t.notes[i]==null)t.notes[i]=t.type==='bass'?36:t.type==='keys'?60:72;b.classList.toggle('on',t.pattern[i]);if(t.pattern[i]){initAudio();playTrack(t,i,ctx.currentTime+.01)}};steps.append(b)});
+  card.append(steps);
+  const controls=document.createElement('div');controls.className='track-controls';
+  const vl=document.createElement('label');vl.innerHTML='<span>Volume <b>'+Math.round(t.vol*100)+'%</b></span>';const range=document.createElement('input');range.type='range';range.min=0;range.max=100;range.value=t.vol*100;range.oninput=()=>{t.vol=range.value/100;vl.querySelector('b').textContent=range.value+'%'};vl.append(range);
+  const il=document.createElement('label');il.textContent='Type de piste';const sel=document.createElement('select');[['drums','Batterie'],['bass','Basse'],['keys','Piano'],['synth','Synthé']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;sel.append(o)});sel.value=t.type;sel.onchange=()=>{t.type=sel.value;t.name=sel.options[sel.selectedIndex].text;renderTracks()};il.append(sel);
+  const nl=document.createElement('label');nl.textContent='Note (mélodie)';const ns=document.createElement('select');[['36','Do grave'],['48','Do bas'],['60','Do'],['62','Ré'],['64','Mi'],['65','Fa'],['67','Sol'],['69','La'],['71','Si'],['72','Do aigu'],['74','Ré aigu'],['76','Mi aigu'],['79','Sol aigu']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;ns.append(o)});ns.value=t.notes.find(n=>n!=null)??60;ns.onchange=()=>{t.notes=t.notes.map((n,i)=>t.pattern[i]?+ns.value:n)};nl.append(ns);
+  controls.append(vl,il,nl);card.append(controls);root.append(card)
+ })
+}
+function makeOffline(){
+ const bpm=Math.max(50,Math.min(180,+$('tempo').value||110)), bars=Math.max(1,Math.min(8,+$('bars').value||4));
+ const sr=44100, duration=bars*4*60/bpm, length=Math.ceil(sr*duration);
+ const off=new OfflineAudioContext(1,length,sr), out=off.createGain();out.gain.value=+$('master').value/100;out.connect(off.destination);
+ function addTone(freq,time,dur,vol,type){const o=off.createOscillator(),g=off.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(.0001,time);g.gain.exponentialRampToValueAtTime(Math.max(.001,vol),time+.01);g.gain.exponentialRampToValueAtTime(.0001,Math.min(duration,time+dur));o.connect(g);g.connect(out);o.start(time);o.stop(Math.min(duration,time+dur+.02))}
+ function addDrum(kind,time,vol){const g=off.createGain();g.gain.setValueAtTime(vol,time);g.gain.exponentialRampToValueAtTime(.001,Math.min(duration,time+.13));g.connect(out);if(kind==='kick'){const o=off.createOscillator();o.type='sine';o.frequency.setValueAtTime(140,time);o.frequency.exponentialRampToValueAtTime(45,time+.12);o.connect(g);o.start(time);o.stop(Math.min(duration,time+.14))}else{const n=Math.floor(sr*.08),buf=off.createBuffer(1,n,sr),d=buf.getChannelData(0);for(let j=0;j<n;j++)d[j]=Math.random()*2-1;const s=off.createBufferSource();s.buffer=buf;s.connect(g);s.start(time);s.stop(Math.min(duration,time+.08))}}
+ const interval=60/bpm/4;
+ for(let s=0;s<bars*16;s++){const i=s%16,time=s*interval;tracks.forEach(t=>{if(t.muted||!t.pattern[i])return;const v=t.vol;if(t.type==='drums'){if(i%4===0)addDrum('kick',time,v*.8);else if(i%4===2)addDrum('hat',time,v*.18);if(i===4||i===12)addDrum('snare',time,v*.42)}else{const midi=t.notes[i]??(t.type==='bass'?36:t.type==='keys'?60:72);addTone(440*Math.pow(2,(midi-69)/12),time,t.type==='bass'?.19:.27,v*.22,t.type==='bass'?'triangle':t.type==='keys'?'sine':'sawtooth')}})}
+ return off.startRendering()
+}
+function wavBlob(buffer){
+ const data=buffer.getChannelData(0), samples=data.length, ab=new ArrayBuffer(44+samples*2),v=new DataView(ab);
+ const str=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+ str(0,'RIFF');v.setUint32(4,36+samples*2,true);str(8,'WAVE');str(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,buffer.sampleRate,true);v.setUint32(28,buffer.sampleRate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);str(36,'data');v.setUint32(40,samples*2,true);
+ for(let i=0;i<samples;i++){let x=Math.max(-1,Math.min(1,data[i]));v.setInt16(44+i*2,x<0?x*32768:x*32767,true)}
+ return new Blob([ab],{type:'audio/wav'})
+}
+function download(blob,name){const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000)}
+$('play').onclick=()=>playing?stop():start();
+$('master').oninput=()=>{if(master)master.gain.value=+$('master').value/100};
+$('add').onclick=()=>{if(tracks.length>=8){toast('Maximum : 8 pistes dans ce prototype');return}const types=['drums','bass','keys','synth'];mkTrack(types[tracks.length%types.length])};
+$('clear').onclick=()=>{tracks.forEach(t=>{t.pattern.fill(false);t.notes.fill(null)});renderTracks();toast('Motifs effacés')};
+$('wav').onclick=async()=>{try{stop();$('status').textContent='Préparation du mixage…';const b=await makeOffline();download(wavBlob(b),'BeatLab-mix.wav');$('status').textContent='WAV exporté';toast('WAV prêt !')}catch(e){console.error(e);toast('Export impossible sur ce navigateur')}};
+$('mp3').onclick=async()=>{try{stop();$('status').textContent='Préparation du MP3…';if(!window.lamejs){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';s.onload=resolve;s.onerror=reject;document.head.append(s)})}const b=await makeOffline(),data=b.getChannelData(0),factor=+$('quality').value,encoder=new lamejs.Mp3Encoder(1,b.sampleRate,factor),chunk=1152,parts=[];for(let i=0;i<data.length;i+=chunk){const slice=data.subarray(i,Math.min(i+chunk,data.length)),pcm=new Int16Array(slice.length);for(let j=0;j<slice.length;j++){const x=Math.max(-1,Math.min(1,slice[j]));pcm[j]=x<0?x*32768:x*32767}const out=encoder.encodeBuffer(pcm);if(out.length)parts.push(new Int8Array(out))}const end=encoder.flush();if(end.length)parts.push(new Int8Array(end));download(new Blob(parts,{type:'audio/mpeg'}),'BeatLab-mix-'+factor+'kbps.mp3');$('status').textContent='MP3 exporté';toast('MP3 prêt !')}catch(e){console.error(e);$('status').textContent='Export MP3 non abouti';toast('MP3 : connexion requise ou encodeur bloqué. Essaie WAV.')}};
+$('project').onclick=()=>{const data={app:'BeatLab',version:1,tempo:+$('tempo').value,bars:+$('bars').value,master:+$('master').value,tracks};download(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),'BeatLab-projet.json');toast('Projet sauvegardé')};
+$('loadfile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!Array.isArray(d.tracks))throw Error();tracks=d.tracks.slice(0,8);nextId=Math.max(1,...tracks.map(t=>t.id+1));$('tempo').value=d.tempo||110;$('bars').value=d.bars||4;$('master').value=d.master??75;renderTracks();toast('Projet chargé')}catch(err){toast('Fichier projet invalide')}e.target.value=''};
+function drawPiano(){const root=$('piano');root.innerHTML='';const oct=+$('octave').value;const semis=[0,2,4,5,7,9,11,12];semis.forEach((s,i)=>{const b=document.createElement('button');b.className='key';b.textContent=noteNames[i];b.onpointerdown=()=>{initAudio();const midi=(oct+1)*12+s;const typ=$('liveInstrument').value;oscNote(440*Math.pow(2,(midi-69)/12),ctx.currentTime,.45,.22,typ==='bass'?'triangle':typ==='synth'?'sawtooth':'sine')};root.append(b)})}
+$('octave').onchange=drawPiano;
+mkTrack('drums');mkTrack('bass');mkTrack('keys');drawPiano();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(() => {}));
+}
+</script>
+</body></html>
